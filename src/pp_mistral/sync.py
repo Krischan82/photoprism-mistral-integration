@@ -4,6 +4,7 @@ from typing import Any
 
 from .config import Settings
 from .geocode import geocode_place
+from .image_utils import resize_image
 from .mistral_client import MistralClient, MistralError, PhotoAnalysis
 from .photoprism_client import PhotoPrismClient, PhotoPrismError
 
@@ -115,6 +116,9 @@ def run_once(settings: Settings) -> int:
 
         try:
             image_bytes = pp.download_preview(uid)
+            image_bytes = resize_image(
+                image_bytes, settings.image_max_dimension, settings.image_jpeg_quality
+            )
         except PhotoPrismError as exc:
             logger.warning("Skipping %s: could not download preview: %s", uid, exc)
             continue
@@ -143,6 +147,67 @@ def run_once(settings: Settings) -> int:
 
     logger.info("Run finished, %d photo(s) updated.", processed)
     return processed
+
+
+def run_random_test(settings: Settings, write: bool = False) -> None:
+    """Pick one random photo, run it through Mistral and print the result.
+
+    Intended for manually verifying that PhotoPrism connectivity, image
+    download and the Mistral prompt all work end to end, without touching
+    your whole library. Nothing is written back unless `write=True`.
+    """
+    pp = PhotoPrismClient(
+        settings.photoprism_url,
+        client_id=settings.photoprism_client_id,
+        client_secret=settings.photoprism_client_secret,
+        username=settings.photoprism_username,
+        password=settings.photoprism_password,
+    )
+    pp.authenticate()
+
+    photo = pp.get_random_photo()
+    if not photo:
+        print("No photos found in this PhotoPrism library.")
+        return
+
+    uid = photo.get("UID")
+    title = photo.get("Title") or uid
+    print(f"Selected photo: {title} ({uid})")
+
+    raw_bytes = pp.download_preview(uid)
+    resized_bytes = resize_image(raw_bytes, settings.image_max_dimension, settings.image_jpeg_quality)
+    print(
+        f"Downloaded preview: {len(raw_bytes) / 1024:.0f} KB "
+        f"-> resized to {len(resized_bytes) / 1024:.0f} KB "
+        f"(max {settings.image_max_dimension}px, q={settings.image_jpeg_quality})"
+    )
+
+    mistral = MistralClient(settings.mistral_api_key, model=settings.mistral_model)
+    analysis = mistral.analyze_image(resized_bytes)
+
+    print("\n--- Mistral analysis --------------------------------------")
+    print(f"Description : {analysis.description}")
+    print(f"Keywords    : {', '.join(analysis.keywords) if analysis.keywords else '-'}")
+    print(f"Location    : {analysis.location_place or '-'} (confidence: {analysis.location_confidence})")
+    print("-------------------------------------------------------------\n")
+
+    print("--- Current PhotoPrism values --------------------------------")
+    print(f"Description : {_current_description(photo) or '-'}")
+    print(f"Keywords    : {', '.join(_current_keywords(photo)) or '-'}")
+    print(f"Location    : Lat={photo.get('Lat')} Lng={photo.get('Lng')}")
+    print("-------------------------------------------------------------\n")
+
+    patch = build_patch(photo, analysis, settings)
+    if not patch:
+        print("Nothing to update (values already present, or below confidence threshold).")
+        return
+
+    if write:
+        pp.update_photo(uid, patch)
+        print(f"Saved to PhotoPrism: {list(patch.keys())}")
+    else:
+        print(f"Would update: {patch}")
+        print("Re-run with --write to actually save this to PhotoPrism.")
 
 
 def run_forever(settings: Settings) -> None:

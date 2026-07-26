@@ -25,6 +25,14 @@ analysieren und schreibt die Ergebnisse zurück nach PhotoPrism.
 - Bestehende Werte werden standardmäßig **nie überschrieben**
   (`OVERWRITE_EXISTING=false`).
 - `--dry-run` zeigt an, was geändert würde, ohne zu schreiben.
+- **Bildverkleinerung** – jedes Foto wird vor dem Versand an Mistral auf
+  max. `IMAGE_MAX_DIMENSION` Pixel (längste Kante, Standard 1024) verkleinert
+  und als JPEG re-encodiert, um Tokens/Kosten zu sparen.
+- **Laufend neue Fotos**: Der Dauerbetrieb (`docker compose up -d`, kein
+  `--once`) prüft alle `SYNC_INTERVAL_SECONDS` (Standard 1h) die Bibliothek
+  und verarbeitet alles, was noch Beschreibung/Keywords/Standort vermissen
+  lässt – das schließt neu hinzugefügte Fotos automatisch mit ein, ohne
+  dass eine gesonderte "neu"-Erkennung nötig ist.
 
 ## Architektur
 
@@ -40,25 +48,52 @@ src/pp_mistral/
 
 ## Setup
 
+> Alle Zugangsdaten (PhotoPrism-URL/-Credentials, Mistral-API-Key) gehören
+> in eine **lokale** `.env`-Datei auf dem Rechner, auf dem du diesen
+> Container startest – nicht in einen Chat oder ins Repo committen.
+
 ```bash
 cp .env.example .env
-# .env ausfüllen: PHOTOPRISM_URL, PHOTOPRISM_CLIENT_ID/SECRET, MISTRAL_API_KEY
+```
+
+`.env` ausfüllen:
+
+- `PHOTOPRISM_URL` – z.B. `http://192.168.1.50:2342` (IP/Hostname + Port
+  deiner PhotoPrism-Instanz im lokalen Netz).
+- `PHOTOPRISM_CLIENT_ID` / `PHOTOPRISM_CLIENT_SECRET` – erstelle dazu in
+  PhotoPrism unter **Settings → Applications** einen OAuth-Client mit den
+  Scopes `photos`, `metadata`, `download`. Alternativ geht auch
+  `PHOTOPRISM_USERNAME`/`PHOTOPRISM_PASSWORD`.
+- `MISTRAL_API_KEY` – von [console.mistral.ai](https://console.mistral.ai/).
+
+```bash
 docker compose up -d --build
 ```
 
-PhotoPrism-Zugangsdaten: Lege unter **Settings → Applications** in
-PhotoPrism einen OAuth-Client an (Scopes: `photos`, `metadata`, `download`)
-und trage `PHOTOPRISM_CLIENT_ID`/`PHOTOPRISM_CLIENT_SECRET` ein. Alternativ
-funktioniert auch `PHOTOPRISM_USERNAME`/`PHOTOPRISM_PASSWORD`.
+### Testen mit einem Zufallsfoto
 
-Mistral-API-Key: [console.mistral.ai](https://console.mistral.ai/).
+Bevor du das Tool auf die ganze Bibliothek loslässt, kannst du gezielt ein
+einzelnes zufälliges Foto testen:
+
+```bash
+docker compose run --rm photoprism-mistral python -m pp_mistral.main --random
+```
+
+Das lädt ein zufälliges Foto, verkleinert es, schickt es an Mistral und
+druckt Beschreibung/Keywords/Standort-Vermutung sowie die aktuellen
+PhotoPrism-Werte – **ohne** etwas zu speichern. Erst mit `--write` wird das
+Ergebnis tatsächlich in PhotoPrism gespeichert:
+
+```bash
+docker compose run --rm photoprism-mistral python -m pp_mistral.main --random --write
+```
 
 ### Lokal ohne Docker
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-PYTHONPATH=src python -m pp_mistral.main --once --dry-run
+PYTHONPATH=src python -m pp_mistral.main --random
 ```
 
 ### Tests

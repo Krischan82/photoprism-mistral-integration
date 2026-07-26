@@ -21,6 +21,8 @@ def make_settings(**overrides):
         sync_interval_seconds=60,
         dry_run=False,
         geocode_user_agent="test-agent",
+        image_max_dimension=1024,
+        image_jpeg_quality=85,
     )
     base.update(overrides)
     return Settings(**base)

@@ -119,6 +119,20 @@ class PhotoPrismClient:
                 return
             offset += batch_size
 
+    def get_random_photo(self) -> dict[str, Any] | None:
+        """Fetch a single random photo, used by the `--random` test mode."""
+        resp = self._session.get(
+            f"{self.base_url}/api/v1/photos",
+            params={"count": 1, "order": "random"},
+            timeout=self.timeout,
+        )
+        if not resp.ok:
+            raise PhotoPrismError(
+                f"Fetching a random photo failed ({resp.status_code}): {resp.text[:300]}"
+            )
+        page = resp.json()
+        return page[0] if page else None
+
     def get_photo(self, uid: str) -> dict[str, Any]:
         resp = self._session.get(f"{self.base_url}/api/v1/photos/{uid}", timeout=self.timeout)
         if not resp.ok:

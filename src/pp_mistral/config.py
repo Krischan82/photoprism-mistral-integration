@@ -44,6 +44,9 @@ class Settings:
 
     geocode_user_agent: str
 
+    image_max_dimension: int
+    image_jpeg_quality: int
+
     @classmethod
     def from_env(cls) -> "Settings":
         return cls(
@@ -65,4 +68,6 @@ class Settings:
             geocode_user_agent=os.environ.get(
                 "GEOCODE_USER_AGENT", "photoprism-mistral-integration/1.0"
             ),
+            image_max_dimension=_int("IMAGE_MAX_DIMENSION", 1024),
+            image_jpeg_quality=_int("IMAGE_JPEG_QUALITY", 85),
         )
