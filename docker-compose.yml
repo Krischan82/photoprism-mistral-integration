@@ -1,0 +1,19 @@
+services:
+  photoprism-mistral:
+    build: .
+    container_name: photoprism-mistral-integration
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Overridable via .env; shown here so it's easy to see what's used.
+      PHOTOPRISM_URL: "${PHOTOPRISM_URL:-http://photoprism:2342}"
+    networks:
+      - photoprism
+
+networks:
+  photoprism:
+    external: true
+    # Adjust to match the network your existing PhotoPrism stack uses,
+    # e.g. `docker network ls` after starting PhotoPrism's own compose file.
+    name: photoprism_default
