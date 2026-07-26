@@ -70,6 +70,51 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
+### Deployment in einem `docker/compose|configs|volumes|logs`-Layout
+
+Wenn du deine Stacks nach dem Schema
+
+```
+docker/
+  compose/
+  configs/
+  volumes/
+  logs/
+```
+
+organisierst, leg diesen Service unter `docker/compose/photoprism-mistral/`
+ab:
+
+```bash
+mkdir -p docker/compose/photoprism-mistral
+git clone -b claude/project-analysis-odx6md \
+  https://github.com/Krischan82/photoprism-mistral-integration.git \
+  docker/compose/photoprism-mistral
+cd docker/compose/photoprism-mistral
+
+cp .env.example .env
+# .env ausfüllen (siehe oben) - LOG_DIR steht per Default schon auf
+# ../../logs/photoprism-mistral, also docker/logs/photoprism-mistral
+
+mkdir -p ../../logs/photoprism-mistral
+
+docker compose up -d --build
+```
+
+`docker-compose.yml` mountet `${LOG_DIR}` nach `/app/logs` im Container und
+der Service schreibt zusätzlich zur Konsolenausgabe eine rotierende
+Logdatei dorthin (`LOG_FILE=/app/logs/photoprism-mistral.log`, max. 5 MB ×
+3 Dateien). Ein eigener Eintrag unter `docker/configs/` oder
+`docker/volumes/` ist für dieses (zustandslose) Tool nicht nötig – es
+persistiert selbst nichts außer den Logs.
+
+Da PhotoPrism bei dir auf einer **anderen Maschine** im selben Netzwerk
+läuft, reicht `PHOTOPRISM_URL=http://<photoprism-host>:2342` in der `.env` –
+es muss kein gemeinsames Docker-Netzwerk eingerichtet werden. Falls
+PhotoPrism später auf denselben Docker-Host zieht, kannst du stattdessen
+den auskommentierten `networks:`-Block in `docker-compose.yml` aktivieren
+und den Netzwerknamen per `docker network ls` nachschlagen.
+
 ### Testen mit einem Zufallsfoto
 
 Bevor du das Tool auf die ganze Bibliothek loslässt, kannst du gezielt ein

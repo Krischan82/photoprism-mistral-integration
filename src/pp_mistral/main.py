@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+from logging.handlers import RotatingFileHandler
 
 from dotenv import load_dotenv
 
@@ -27,9 +28,17 @@ def main() -> None:
     args = parser.parse_args()
 
     load_dotenv()
+
+    handlers: list[logging.Handler] = [logging.StreamHandler()]
+    log_file = os.environ.get("LOG_FILE")
+    if log_file:
+        os.makedirs(os.path.dirname(log_file) or ".", exist_ok=True)
+        handlers.append(RotatingFileHandler(log_file, maxBytes=5_000_000, backupCount=3))
+
     logging.basicConfig(
         level=os.environ.get("LOG_LEVEL", "INFO"),
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+        handlers=handlers,
     )
 
     settings = Settings.from_env()

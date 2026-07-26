@@ -6,14 +6,20 @@ services:
     env_file:
       - .env
     environment:
-      # Overridable via .env; shown here so it's easy to see what's used.
-      PHOTOPRISM_URL: "${PHOTOPRISM_URL:-http://photoprism:2342}"
-    networks:
-      - photoprism
-
-networks:
-  photoprism:
-    external: true
-    # Adjust to match the network your existing PhotoPrism stack uses,
-    # e.g. `docker network ls` after starting PhotoPrism's own compose file.
-    name: photoprism_default
+      LOG_FILE: "/app/logs/photoprism-mistral.log"
+    volumes:
+      # Matches a docker/compose/<stack>/logs layout as e.g.:
+      # docker/compose/photoprism-mistral -> ../../logs/photoprism-mistral
+      - ${LOG_DIR:-./logs}:/app/logs
+    # PhotoPrism runs on a different host on the same network here, so
+    # there's no shared Docker network to join - PHOTOPRISM_URL in .env
+    # just points at its LAN IP/hostname. If PhotoPrism ever runs on this
+    # same Docker host, join its network instead, e.g.:
+    #
+    # networks:
+    #   - photoprism
+    #
+    # networks:
+    #   photoprism:
+    #     external: true
+    #     name: <actual network name, see `docker network ls`>
