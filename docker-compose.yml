@@ -11,10 +11,18 @@ services:
       # Matches a docker/compose/<stack>/logs layout as e.g.:
       # docker/compose/photoprism-mistral -> ../../logs/photoprism-mistral
       - ${LOG_DIR:-./logs}:/app/logs
-    # PhotoPrism runs on a different host on the same network here, so
-    # there's no shared Docker network to join - PHOTOPRISM_URL in .env
-    # just points at its LAN IP/hostname. If PhotoPrism ever runs on this
-    # same Docker host, join its network instead, e.g.:
+    # This service only makes outbound HTTP calls (to PhotoPrism and Mistral)
+    # and exposes no ports of its own, so host networking is safe and is the
+    # most reliable way to reach another machine on the LAN - it uses the
+    # exact same network path as the Docker host itself. Linux only; not
+    # supported by Docker Desktop on Mac/Windows.
+    network_mode: host
+
+    # Alternative if you're not on a Linux Docker host, or prefer an
+    # isolated bridge network: comment out `network_mode: host` above and
+    # uncomment the block below instead. Use this if PhotoPrism ever runs
+    # as a container on this same Docker host, joining its network so you
+    # can reach it by container name.
     #
     # networks:
     #   - photoprism

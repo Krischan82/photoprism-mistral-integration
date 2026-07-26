@@ -109,11 +109,28 @@ Logdatei dorthin (`LOG_FILE=/app/logs/photoprism-mistral.log`, max. 5 MB ×
 persistiert selbst nichts außer den Logs.
 
 Da PhotoPrism bei dir auf einer **anderen Maschine** im selben Netzwerk
-läuft, reicht `PHOTOPRISM_URL=http://<photoprism-host>:2342` in der `.env` –
-es muss kein gemeinsames Docker-Netzwerk eingerichtet werden. Falls
-PhotoPrism später auf denselben Docker-Host zieht, kannst du stattdessen
-den auskommentierten `networks:`-Block in `docker-compose.yml` aktivieren
-und den Netzwerknamen per `docker network ls` nachschlagen.
+läuft, reicht `PHOTOPRISM_URL=http://<photoprism-host>:2342` in der `.env`.
+Der Container läuft standardmäßig mit `network_mode: host` (nur Linux) –
+damit hat er dieselbe Netzwerksicht wie der Docker-Host selbst, was LAN-
+Erreichbarkeit garantiert und Docker-Bridge/Firewall-Probleme umgeht. Falls
+PhotoPrism später als Container auf denselben Docker-Host zieht, kannst du
+stattdessen den auskommentierten `networks:`-Block in `docker-compose.yml`
+aktivieren und den Netzwerknamen per `docker network ls` nachschlagen.
+
+#### Troubleshooting: "Connection timeout" zu PhotoPrism
+
+Wenn `--random` mit einem Timeout beim Verbinden zu `PHOTOPRISM_URL`
+fehlschlägt, ist das (fast immer) kein Bug im Tool, sondern ein
+Netzwerk-Problem:
+
+1. Vom **Docker-Host** (nicht aus dem Container) testen:
+   `curl -v http://<photoprism-ip>:2342`
+2. Funktioniert das, aber der Container kommt trotz `network_mode: host`
+   nicht durch: IP/Port in `.env` prüfen, und ob eine Firewall/VPN auf dem
+   Host gezielt Docker-Traffic blockt.
+3. Funktioniert schon der Host-`curl` nicht: liegt außerhalb von Docker –
+   IP/Port falsch, PhotoPrism lauscht nur auf `127.0.0.1` statt `0.0.0.0`,
+   oder eine Firewall zwischen den beiden Maschinen blockt generell.
 
 ### Testen mit einem Zufallsfoto
 

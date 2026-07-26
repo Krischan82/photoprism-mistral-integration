@@ -37,6 +37,22 @@ class PhotoPrismClient:
         self.timeout = timeout
         self._session = requests.Session()
 
+    def _request(self, method: str, path: str, **kwargs: Any) -> requests.Response:
+        url = f"{self.base_url}{path}"
+        try:
+            return self._session.request(method, url, timeout=self.timeout, **kwargs)
+        except requests.exceptions.RequestException as exc:
+            raise PhotoPrismError(
+                f"Could not reach PhotoPrism at {url}: {exc}. This is a network "
+                "reachability issue, not an application error - check that "
+                "PHOTOPRISM_URL is correct, and that this container can "
+                "actually reach it (e.g. `docker compose exec photoprism-mistral "
+                "curl -v $PHOTOPRISM_URL` should get a response). If the Docker "
+                "host itself can reach PhotoPrism but the container can't, try "
+                "`network_mode: host` in docker-compose.yml (Linux only), or "
+                "check firewall/forwarding rules and any VPN routes on the host."
+            ) from exc
+
     # -- auth -----------------------------------------------------------
 
     def authenticate(self) -> None:
@@ -53,14 +69,14 @@ class PhotoPrismClient:
             )
 
     def _authenticate_oauth(self) -> None:
-        resp = self._session.post(
-            f"{self.base_url}/api/v1/oauth/token",
+        resp = self._request(
+            "POST",
+            "/api/v1/oauth/token",
             data={
                 "grant_type": "client_credentials",
                 "client_id": self._client_id,
                 "client_secret": self._client_secret,
             },
-            timeout=self.timeout,
         )
         if not resp.ok:
             raise PhotoPrismError(
@@ -72,10 +88,10 @@ class PhotoPrismClient:
         self._session.headers["Authorization"] = f"Bearer {token}"
 
     def _authenticate_session(self) -> None:
-        resp = self._session.post(
-            f"{self.base_url}/api/v1/session",
+        resp = self._request(
+            "POST",
+            "/api/v1/session",
             json={"username": self._username, "password": self._password},
-            timeout=self.timeout,
         )
         if not resp.ok:
             raise PhotoPrismError(
@@ -100,9 +116,7 @@ class PhotoPrismClient:
                 "order": "added",
                 "merged": "true",
             }
-            resp = self._session.get(
-                f"{self.base_url}/api/v1/photos", params=params, timeout=self.timeout
-            )
+            resp = self._request("GET", "/api/v1/photos", params=params)
             if not resp.ok:
                 raise PhotoPrismError(
                     f"Listing photos failed ({resp.status_code}): {resp.text[:300]}"
@@ -121,11 +135,7 @@ class PhotoPrismClient:
 
     def get_random_photo(self) -> dict[str, Any] | None:
         """Fetch a single random photo, used by the `--random` test mode."""
-        resp = self._session.get(
-            f"{self.base_url}/api/v1/photos",
-            params={"count": 1, "order": "random"},
-            timeout=self.timeout,
-        )
+        resp = self._request("GET", "/api/v1/photos", params={"count": 1, "order": "random"})
         if not resp.ok:
             raise PhotoPrismError(
                 f"Fetching a random photo failed ({resp.status_code}): {resp.text[:300]}"
@@ -134,7 +144,7 @@ class PhotoPrismClient:
         return page[0] if page else None
 
     def get_photo(self, uid: str) -> dict[str, Any]:
-        resp = self._session.get(f"{self.base_url}/api/v1/photos/{uid}", timeout=self.timeout)
+        resp = self._request("GET", f"/api/v1/photos/{uid}")
         if not resp.ok:
             raise PhotoPrismError(
                 f"Fetching photo {uid} failed ({resp.status_code}): {resp.text[:300]}"
@@ -152,9 +162,7 @@ class PhotoPrismClient:
         """
         current = self.get_photo(uid)
         merged = _deep_merge(current, patch)
-        resp = self._session.put(
-            f"{self.base_url}/api/v1/photos/{uid}", json=merged, timeout=self.timeout
-        )
+        resp = self._request("PUT", f"/api/v1/photos/{uid}", json=merged)
         if not resp.ok:
             raise PhotoPrismError(
                 f"Updating photo {uid} failed ({resp.status_code}): {resp.text[:300]}"
@@ -162,7 +170,7 @@ class PhotoPrismClient:
         return resp.json()
 
     def download_preview(self, uid: str) -> bytes:
-        resp = self._session.get(f"{self.base_url}/api/v1/photos/{uid}/dl", timeout=self.timeout)
+        resp = self._request("GET", f"/api/v1/photos/{uid}/dl")
         if not resp.ok:
             raise PhotoPrismError(
                 f"Downloading preview for {uid} failed ({resp.status_code}). "
