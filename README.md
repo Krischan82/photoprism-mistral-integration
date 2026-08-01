@@ -133,6 +133,35 @@ Netzwerk-Problem:
    IP/Port falsch, PhotoPrism lauscht nur auf `127.0.0.1` statt `0.0.0.0`,
    oder eine Firewall zwischen den beiden Maschinen blockt generell.
 
+### Dauerbetrieb (neue Fotos automatisch verarbeiten)
+
+```bash
+docker compose up -d
+```
+
+Ohne `--once`/`--random` startet der Container im Dauerbetrieb: alle
+`SYNC_INTERVAL_SECONDS` (Standard 3600 = 1h) wird die Bibliothek durchsucht
+und alles verarbeitet, was noch Beschreibung/Keywords/Standort vermissen
+lässt – das schließt neu hinzugefügte Fotos automatisch mit ein. Für
+zügigeres Aufgreifen neuer Fotos `SYNC_INTERVAL_SECONDS` in der `.env`
+kleiner setzen (z.B. `300` für 5 Minuten).
+
+Jede Änderung wird mit Titel/UID und den tatsächlich gesetzten Werten
+geloggt:
+
+```
+2026-08-01 18:02:11 INFO pp_mistral.sync: Analysing Tiergarten Nürnberg (pt1bzrtjwcddkssc) ...
+2026-08-01 18:02:14 INFO pp_mistral.sync: Updated Tiergarten Nürnberg (pt1bzrtjwcddkssc): description="Ein Erdmännchen sitzt aufmerksam auf einem Felsen im Zoo."; keywords=[erdmännchen, zoo, tier, felsen, außen]
+```
+
+Logs ansehen:
+
+```bash
+docker compose logs -f
+# oder die Datei direkt (siehe LOG_DIR/LOG_FILE):
+tail -f ../../logs/photoprism-mistral/photoprism-mistral.log
+```
+
 ### Testen mit einem Zufallsfoto
 
 Bevor du das Tool auf die ganze Bibliothek loslässt, kannst du gezielt ein

@@ -1,6 +1,6 @@
 from pp_mistral.config import Settings
 from pp_mistral.mistral_client import PhotoAnalysis
-from pp_mistral.sync import GEO_REVIEW_KEYWORD, build_patch, needs_processing
+from pp_mistral.sync import GEO_REVIEW_KEYWORD, _summarize_patch, build_patch, needs_processing
 
 
 def make_settings(**overrides):
@@ -90,3 +90,26 @@ def test_build_patch_skips_geolocation_when_already_present():
     analysis = PhotoAnalysis(location_confidence="high", location_place="Eiffel Tower, Paris")
     patch = build_patch(photo, analysis, settings)
     assert patch == {}
+
+
+def test_summarize_patch_includes_description_keywords_and_location():
+    analysis = PhotoAnalysis(
+        description="A cat on a sofa",
+        keywords=["cat", "sofa"],
+        location_place="Eiffel Tower, Paris",
+    )
+    patch = {
+        "Description": "A cat on a sofa",
+        "Details": {"Keywords": "cat, sofa"},
+        "Lat": 48.8584,
+        "Lng": 2.2945,
+    }
+    summary = _summarize_patch(patch, analysis)
+    assert 'description="A cat on a sofa"' in summary
+    assert "keywords=[cat, sofa]" in summary
+    assert "Eiffel Tower, Paris" in summary
+    assert "48.85840" in summary
+
+
+def test_summarize_patch_empty_patch():
+    assert _summarize_patch({}, PhotoAnalysis()) == "(no changes)"

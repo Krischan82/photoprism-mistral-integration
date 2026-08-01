@@ -109,6 +109,19 @@ def build_patch(photo: dict[str, Any], analysis: PhotoAnalysis, settings: Settin
     return patch
 
 
+def _summarize_patch(patch: dict[str, Any], analysis: PhotoAnalysis) -> str:
+    parts = []
+    if "Description" in patch:
+        parts.append(f'description="{patch["Description"]}"')
+    details = patch.get("Details") or {}
+    if "Keywords" in details:
+        parts.append(f'keywords=[{details["Keywords"]}]')
+    if "Lat" in patch and "Lng" in patch:
+        place = analysis.location_place or "?"
+        parts.append(f'location="{place}" ({patch["Lat"]:.5f}, {patch["Lng"]:.5f})')
+    return "; ".join(parts) if parts else "(no changes)"
+
+
 def run_once(settings: Settings) -> int:
     pp = PhotoPrismClient(
         settings.photoprism_url,
@@ -131,6 +144,9 @@ def run_once(settings: Settings) -> int:
         uid = photo.get("UID")
         if not uid:
             continue
+        title = photo.get("Title") or uid
+
+        logger.info("Analysing %s (%s) ...", title, uid)
 
         try:
             image_bytes = _download_image(pp, photo)
@@ -138,27 +154,29 @@ def run_once(settings: Settings) -> int:
                 image_bytes, settings.image_max_dimension, settings.image_jpeg_quality
             )
         except PhotoPrismError as exc:
-            logger.warning("Skipping %s: could not download image: %s", uid, exc)
+            logger.warning("Skipping %s (%s): could not download image: %s", title, uid, exc)
             continue
 
         try:
             analysis = mistral.analyze_image(image_bytes)
         except MistralError as exc:
-            logger.warning("Skipping %s: Mistral analysis failed: %s", uid, exc)
+            logger.warning("Skipping %s (%s): Mistral analysis failed: %s", title, uid, exc)
             continue
 
         patch = build_patch(photo, analysis, settings)
         if not patch:
+            logger.info("No changes for %s (%s)", title, uid)
             continue
 
+        summary = _summarize_patch(patch, analysis)
         if settings.dry_run:
-            logger.info("[dry-run] Would update %s with: %s", uid, patch)
+            logger.info("[dry-run] %s (%s): %s", title, uid, summary)
         else:
             try:
                 pp.update_photo(uid, patch)
-                logger.info("Updated photo %s: %s", uid, list(patch.keys()))
+                logger.info("Updated %s (%s): %s", title, uid, summary)
             except PhotoPrismError as exc:
-                logger.error("Failed to update %s: %s", uid, exc)
+                logger.error("Failed to update %s (%s): %s", title, uid, exc)
                 continue
 
         processed += 1
@@ -224,9 +242,9 @@ def run_random_test(settings: Settings, write: bool = False) -> None:
 
     if write:
         pp.update_photo(uid, patch)
-        print(f"Saved to PhotoPrism: {list(patch.keys())}")
+        print(f"Saved to PhotoPrism: {_summarize_patch(patch, analysis)}")
     else:
-        print(f"Would update: {patch}")
+        print(f"Would update: {_summarize_patch(patch, analysis)}")
         print("Re-run with --write to actually save this to PhotoPrism.")
 
 
