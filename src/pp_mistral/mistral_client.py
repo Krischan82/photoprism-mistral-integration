@@ -43,7 +43,7 @@ class MistralClient:
     def __init__(
         self,
         api_key: str,
-        model: str = "pixtral-large-latest",
+        model: str = "mistral-small-latest",
         timeout: float = 60.0,
     ) -> None:
         self._model = model

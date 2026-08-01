@@ -11,7 +11,7 @@ def make_settings(**overrides):
         photoprism_username=None,
         photoprism_password=None,
         mistral_api_key="key",
-        mistral_model="pixtral-large-latest",
+        mistral_model="mistral-small-latest",
         enable_description=True,
         enable_keywords=True,
         enable_geolocation=True,
