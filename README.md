@@ -176,6 +176,13 @@ Feld ändern, ganzen Datensatz zurückschreiben) statt per angenommenem
 Partial-Update-Schema – das ist robuster gegenüber Versionsunterschieden,
 weil unbekannte Zusatzfelder vom Server ignoriert werden.
 
+Bilder werden über den Thumbnail-Endpunkt (`GET /api/v1/t/:hash/:token/:size`)
+geladen, nicht über `photos/:uid/dl` – letzterer verlangt eine eigene
+Download-Berechtigung/Scope und lieferte in der Praxis einen 403, obwohl
+Login und Foto-Liste einwandfrei funktionierten. Da wir das Bild ohnehin
+selbst verkleinern, reicht ein Thumbnail; schlägt das fehl, fällt das Tool
+automatisch auf `photos/:uid/dl` zurück.
+
 Falls Updates in deiner PhotoPrism-Version nicht ankommen: `LOG_LEVEL=DEBUG`
 setzen und/oder `--dry-run` nutzen, um den generierten Patch zu inspizieren,
 und bei Bedarf die Feldnamen in `sync.py` (`_current_description`,

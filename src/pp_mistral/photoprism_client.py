@@ -36,6 +36,7 @@ class PhotoPrismClient:
         self._password = password
         self.timeout = timeout
         self._session = requests.Session()
+        self._preview_token: str | None = None
 
     def _request(self, method: str, path: str, **kwargs: Any) -> requests.Response:
         url = f"{self.base_url}{path}"
@@ -169,7 +170,56 @@ class PhotoPrismClient:
             )
         return resp.json()
 
+    def get_config(self) -> dict[str, Any]:
+        resp = self._request("GET", "/api/v1/config")
+        if not resp.ok:
+            raise PhotoPrismError(f"Fetching config failed ({resp.status_code}): {resp.text[:300]}")
+        return resp.json()
+
+    def _get_preview_token(self) -> str:
+        if self._preview_token is None:
+            config = self.get_config()
+            token = (
+                config.get("previewToken")
+                or config.get("PreviewToken")
+                or config.get("downloadToken")
+                or config.get("DownloadToken")
+            )
+            if not token:
+                raise PhotoPrismError(
+                    "Could not find a previewToken/downloadToken in the PhotoPrism "
+                    "config response - can't build thumbnail URLs."
+                )
+            self._preview_token = token
+        return self._preview_token
+
+    def download_thumbnail(self, photo: dict[str, Any], size: str = "fit_1920") -> bytes:
+        """Download a server-generated thumbnail instead of the original file.
+
+        `GET /api/v1/photos/:uid/dl` requires a separate download permission/
+        token and returned 403 for plain session/OAuth auth in practice.
+        Thumbnails use a different, more permissive mechanism
+        (`GET /api/v1/t/:hash/:token/:size`) designed for previews, which is
+        also all we need since we downscale the image ourselves anyway.
+        """
+        file_hash = _primary_file_hash(photo)
+        if not file_hash:
+            raise PhotoPrismError(f"Photo {photo.get('UID')} has no file hash to build a thumbnail URL from")
+        token = self._get_preview_token()
+        resp = self._request("GET", f"/api/v1/t/{file_hash}/{token}/{size}")
+        if not resp.ok:
+            raise PhotoPrismError(
+                f"Downloading thumbnail for {photo.get('UID')} failed ({resp.status_code}): "
+                f"{resp.text[:200]}"
+            )
+        return resp.content
+
     def download_preview(self, uid: str) -> bytes:
+        """Fallback: download the original file via the `/dl` endpoint.
+
+        Requires the download permission/scope on the account or OAuth
+        client - prefer `download_thumbnail()` where possible.
+        """
         resp = self._request("GET", f"/api/v1/photos/{uid}/dl")
         if not resp.ok:
             raise PhotoPrismError(
@@ -177,6 +227,16 @@ class PhotoPrismClient:
                 "Make sure the OAuth client / app password has the 'download' scope."
             )
         return resp.content
+
+
+def _primary_file_hash(photo: dict[str, Any]) -> str | None:
+    files = photo.get("Files") or []
+    if not files:
+        return None
+    for f in files:
+        if f.get("Primary"):
+            return f.get("Hash")
+    return files[0].get("Hash")
 
 
 def _deep_merge(base: dict[str, Any], patch: dict[str, Any]) -> dict[str, Any]:

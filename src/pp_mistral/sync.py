@@ -31,6 +31,22 @@ def _has_location(photo: dict[str, Any]) -> bool:
     return bool(photo.get("Lat")) and bool(photo.get("Lng"))
 
 
+def _download_image(pp: PhotoPrismClient, photo: dict[str, Any]) -> bytes:
+    """Download an image to analyse, preferring the thumbnail endpoint.
+
+    `photos/:uid/dl` (the original file) needs the account/OAuth client to
+    have download permission, which not every setup grants - the thumbnail
+    endpoint is more permissive and is all we need since we downscale the
+    image ourselves anyway. Falls back to the original if thumbnails fail.
+    """
+    uid = photo.get("UID")
+    try:
+        return pp.download_thumbnail(photo)
+    except PhotoPrismError as exc:
+        logger.warning("Thumbnail download failed for %s (%s), falling back to /dl", uid, exc)
+        return pp.download_preview(uid)
+
+
 def needs_processing(photo: dict[str, Any], settings: Settings) -> bool:
     if settings.overwrite_existing:
         return True
@@ -115,12 +131,12 @@ def run_once(settings: Settings) -> int:
             continue
 
         try:
-            image_bytes = pp.download_preview(uid)
+            image_bytes = _download_image(pp, photo)
             image_bytes = resize_image(
                 image_bytes, settings.image_max_dimension, settings.image_jpeg_quality
             )
         except PhotoPrismError as exc:
-            logger.warning("Skipping %s: could not download preview: %s", uid, exc)
+            logger.warning("Skipping %s: could not download image: %s", uid, exc)
             continue
 
         try:
@@ -174,7 +190,7 @@ def run_random_test(settings: Settings, write: bool = False) -> None:
     title = photo.get("Title") or uid
     print(f"Selected photo: {title} ({uid})")
 
-    raw_bytes = pp.download_preview(uid)
+    raw_bytes = _download_image(pp, photo)
     resized_bytes = resize_image(raw_bytes, settings.image_max_dimension, settings.image_jpeg_quality)
     print(
         f"Downloaded preview: {len(raw_bytes) / 1024:.0f} KB "
