@@ -16,10 +16,10 @@ MIN_LOCATION_CONFIDENCE = {"none": 0, "low": 1, "medium": 2, "high": 3}
 
 
 def _current_description(photo: dict[str, Any]) -> str | None:
-    if photo.get("Description"):
-        return photo["Description"]
-    details = photo.get("Details") or {}
-    return details.get("Description") or None
+    # PhotoPrism's entity has no "Description" field at all - the free-text
+    # caption shown in the UI's "Details" tab is the top-level "Caption"
+    # field (confirmed via `--inspect` against a live instance).
+    return photo.get("Caption") or None
 
 
 def _current_keywords(photo: dict[str, Any]) -> list[str]:
@@ -65,8 +65,7 @@ def build_patch(photo: dict[str, Any], analysis: PhotoAnalysis, settings: Settin
 
     if settings.enable_description and analysis.description:
         if settings.overwrite_existing or not _current_description(photo):
-            patch["Description"] = analysis.description
-            patch.setdefault("Details", {})["Description"] = analysis.description
+            patch["Caption"] = analysis.description
 
     if settings.enable_keywords and analysis.keywords:
         existing = _current_keywords(photo)
@@ -112,8 +111,8 @@ def build_patch(photo: dict[str, Any], analysis: PhotoAnalysis, settings: Settin
 
 def _summarize_patch(patch: dict[str, Any], analysis: PhotoAnalysis) -> str:
     parts = []
-    if "Description" in patch:
-        parts.append(f'description="{patch["Description"]}"')
+    if "Caption" in patch:
+        parts.append(f'caption="{patch["Caption"]}"')
     details = patch.get("Details") or {}
     if "Keywords" in details:
         parts.append(f'keywords=[{details["Keywords"]}]')

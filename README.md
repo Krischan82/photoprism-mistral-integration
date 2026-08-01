@@ -213,11 +213,23 @@ Login und Foto-Liste einwandfrei funktionierten. Da wir das Bild ohnehin
 selbst verkleinern, reicht ein Thumbnail; schlägt das fehl, fällt das Tool
 automatisch auf `photos/:uid/dl` zurück.
 
-Falls Updates in deiner PhotoPrism-Version nicht ankommen: `LOG_LEVEL=DEBUG`
-setzen und/oder `--dry-run` nutzen, um den generierten Patch zu inspizieren,
-und bei Bedarf die Feldnamen in `sync.py` (`_current_description`,
-`_current_keywords`, `_has_location`, `build_patch`) an deine Version
-anpassen.
+**Bestätigtes Feld-Mapping** (per `--inspect`, s.u.): die generierte
+Beschreibung wird in `Caption` geschrieben (nicht `Description` – dieses
+Feld existiert in PhotoPrism gar nicht), Keywords in `Details.Keywords`,
+Standort in `Lat`/`Lng`. In der PhotoPrism-Oberfläche taucht die Beschreibung
+im Foto-Editor unter dem Tab "Details" als "Bildunterschrift" auf.
+
+Falls Updates in deiner PhotoPrism-Version trotzdem nicht ankommen:
+
+```bash
+docker compose run --rm photoprism-mistral python -m pp_mistral.main --inspect <UID>
+```
+
+gibt das komplette rohe PhotoPrism-JSON für ein Foto aus (UID z.B. aus den
+Logs), damit du/wir die tatsächlichen Feldnamen prüfen und bei Bedarf in
+`sync.py` (`_current_description`, `_current_keywords`, `_has_location`,
+`build_patch`) anpassen können. Zusätzlich hilft `LOG_LEVEL=DEBUG` bzw.
+`--dry-run`, um den generierten Patch vor dem Schreiben zu sehen.
 
 ## Konfiguration
 

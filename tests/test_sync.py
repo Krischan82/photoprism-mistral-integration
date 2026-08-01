@@ -32,7 +32,7 @@ def make_settings(**overrides):
 def test_needs_processing_skips_complete_photo():
     settings = make_settings()
     photo = {
-        "Description": "A cat",
+        "Caption": "A cat",
         "Details": {"Keywords": "cat, sofa"},
         "Lat": 48.1,
         "Lng": 11.5,
@@ -51,16 +51,16 @@ def test_build_patch_fills_description_and_keywords_without_overwriting():
     photo = {"Details": {"Keywords": "cat"}}
     analysis = PhotoAnalysis(description="A cat on a sofa", keywords=["cat", "sofa", "indoor"])
     patch = build_patch(photo, analysis, settings)
-    assert patch["Description"] == "A cat on a sofa"
+    assert patch["Caption"] == "A cat on a sofa"
     assert patch["Details"]["Keywords"] == "cat, sofa, indoor"
 
 
 def test_build_patch_does_not_overwrite_existing_description():
     settings = make_settings(enable_geolocation=False)
-    photo = {"Description": "Existing", "Details": {"Keywords": "cat"}}
+    photo = {"Caption": "Existing", "Details": {"Keywords": "cat"}}
     analysis = PhotoAnalysis(description="New description", keywords=["dog"])
     patch = build_patch(photo, analysis, settings)
-    assert "Description" not in patch
+    assert "Caption" not in patch
 
 
 def test_build_patch_skips_low_confidence_location():
@@ -99,13 +99,13 @@ def test_summarize_patch_includes_description_keywords_and_location():
         location_place="Eiffel Tower, Paris",
     )
     patch = {
-        "Description": "A cat on a sofa",
+        "Caption": "A cat on a sofa",
         "Details": {"Keywords": "cat, sofa"},
         "Lat": 48.8584,
         "Lng": 2.2945,
     }
     summary = _summarize_patch(patch, analysis)
-    assert 'description="A cat on a sofa"' in summary
+    assert 'caption="A cat on a sofa"' in summary
     assert "keywords=[cat, sofa]" in summary
     assert "Eiffel Tower, Paris" in summary
     assert "48.85840" in summary
