@@ -1,3 +1,4 @@
+import json
 import logging
 import time
 from typing import Any
@@ -246,6 +247,25 @@ def run_random_test(settings: Settings, write: bool = False) -> None:
     else:
         print(f"Would update: {_summarize_patch(patch, analysis)}")
         print("Re-run with --write to actually save this to PhotoPrism.")
+
+
+def run_inspect(settings: Settings, uid: str) -> None:
+    """Print the raw PhotoPrism JSON for one photo, for debugging field names.
+
+    PhotoPrism's API isn't formally documented, so when a written field
+    doesn't show up where expected in the UI, the fastest way to find the
+    right key is to look at what PhotoPrism itself returns.
+    """
+    pp = PhotoPrismClient(
+        settings.photoprism_url,
+        client_id=settings.photoprism_client_id,
+        client_secret=settings.photoprism_client_secret,
+        username=settings.photoprism_username,
+        password=settings.photoprism_password,
+    )
+    pp.authenticate()
+    photo = pp.get_photo(uid)
+    print(json.dumps(photo, indent=2, ensure_ascii=False, sort_keys=True))
 
 
 def run_forever(settings: Settings) -> None:

@@ -6,7 +6,7 @@ from logging.handlers import RotatingFileHandler
 from dotenv import load_dotenv
 
 from .config import Settings
-from .sync import run_forever, run_once, run_random_test
+from .sync import run_forever, run_inspect, run_once, run_random_test
 
 
 def main() -> None:
@@ -24,6 +24,11 @@ def main() -> None:
         "--write",
         action="store_true",
         help="With --random: actually save the analysis result to PhotoPrism",
+    )
+    parser.add_argument(
+        "--inspect",
+        metavar="UID",
+        help="Print the raw PhotoPrism JSON for a photo UID and exit, for debugging field names",
     )
     args = parser.parse_args()
 
@@ -45,7 +50,9 @@ def main() -> None:
     if args.dry_run:
         settings.dry_run = True
 
-    if args.random:
+    if args.inspect:
+        run_inspect(settings, args.inspect)
+    elif args.random:
         run_random_test(settings, write=args.write)
     elif args.once:
         run_once(settings)
