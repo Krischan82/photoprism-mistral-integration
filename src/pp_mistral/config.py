@@ -31,6 +31,7 @@ class Settings:
 
     mistral_api_key: str
     mistral_model: str
+    output_language: str
 
     enable_description: bool
     enable_keywords: bool
@@ -57,6 +58,7 @@ class Settings:
             photoprism_password=os.environ.get("PHOTOPRISM_PASSWORD"),
             mistral_api_key=_require("MISTRAL_API_KEY"),
             mistral_model=os.environ.get("MISTRAL_MODEL", "mistral-small-latest"),
+            output_language=os.environ.get("OUTPUT_LANGUAGE", "English"),
             enable_description=_bool("ENABLE_DESCRIPTION", True),
             enable_keywords=_bool("ENABLE_KEYWORDS", True),
             enable_geolocation=_bool("ENABLE_GEOLOCATION", True),

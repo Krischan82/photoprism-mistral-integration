@@ -9,22 +9,26 @@ logger = logging.getLogger(__name__)
 
 MISTRAL_API_URL = "https://api.mistral.ai/v1/chat/completions"
 
-SYSTEM_PROMPT = (
-    "You are a photo cataloguing assistant for a personal photo library. "
-    "Analyse the given photo and respond with a single JSON object, no "
-    "markdown, matching exactly this schema:\n"
-    '{"description": string, "keywords": [string, ...], '
-    '"location_guess": {"confidence": "none"|"low"|"medium"|"high", "place": string|null}}\n'
-    "Rules:\n"
-    "- description: one or two factual sentences describing what is visible.\n"
-    "- keywords: 5 to 12 short, lowercase, singular English keywords "
-    "(subjects, objects, setting, mood, season - no hashtags).\n"
-    "- location_guess: only if the image itself contains visual evidence of "
-    "a specific place (landmark, signage, license plates, architecture "
-    "style, vegetation, etc). Set confidence to 'none' and place to null if "
-    "you would just be guessing without real evidence. 'place' should be a "
-    "short, geocodable string such as 'Eiffel Tower, Paris, France'."
-)
+def build_system_prompt(language: str = "English") -> str:
+    return (
+        "You are a photo cataloguing assistant for a personal photo library. "
+        "Analyse the given photo and respond with a single JSON object, no "
+        "markdown, matching exactly this schema:\n"
+        '{"description": string, "keywords": [string, ...], '
+        '"location_guess": {"confidence": "none"|"low"|"medium"|"high", "place": string|null}}\n'
+        "Rules:\n"
+        f"- description: one or two factual sentences in {language}, describing "
+        "what is visible.\n"
+        f"- keywords: 5 to 12 short, lowercase, singular keywords in {language} "
+        "(subjects, objects, setting, mood, season - no hashtags).\n"
+        "- location_guess: only if the image itself contains visual evidence of "
+        "a specific place (landmark, signage, license plates, architecture "
+        "style, vegetation, etc). Set confidence to 'none' and place to null if "
+        "you would just be guessing without real evidence. 'place' should stay "
+        "in its own language / common English spelling (not translated) and be "
+        "a short, geocodable string such as 'Eiffel Tower, Paris, France' - it "
+        "is looked up via a geocoding service afterwards."
+    )
 
 
 class MistralError(RuntimeError):
@@ -44,9 +48,11 @@ class MistralClient:
         self,
         api_key: str,
         model: str = "mistral-small-latest",
+        language: str = "English",
         timeout: float = 60.0,
     ) -> None:
         self._model = model
+        self._system_prompt = build_system_prompt(language)
         self.timeout = timeout
         self._session = requests.Session()
         self._session.headers["Authorization"] = f"Bearer {api_key}"
@@ -58,7 +64,7 @@ class MistralClient:
             "model": self._model,
             "response_format": {"type": "json_object"},
             "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": self._system_prompt},
                 {
                     "role": "user",
                     "content": [

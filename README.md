@@ -9,7 +9,8 @@ analysieren und schreibt die Ergebnisse zurück nach PhotoPrism.
 
 ## Funktionen
 
-- **Automatische Bildbeschreibungen** – 1–2 Sätze Klartext pro Foto.
+- **Automatische Bildbeschreibungen** – 1–2 Sätze Klartext pro Foto, Sprache
+  über `OUTPUT_LANGUAGE` einstellbar (z.B. `German`, Standard `English`).
 - **Automatische Keywords/Tags** – 5–12 Stichworte, ergänzt bestehende
   Keywords statt sie zu überschreiben (konfigurierbar).
 - **Geolokations-Schätzung** – wenn ein Foto **keine** GPS-Daten hat, prüft

@@ -119,7 +119,9 @@ def run_once(settings: Settings) -> int:
     )
     pp.authenticate()
 
-    mistral = MistralClient(settings.mistral_api_key, model=settings.mistral_model)
+    mistral = MistralClient(
+        settings.mistral_api_key, model=settings.mistral_model, language=settings.output_language
+    )
 
     processed = 0
     for photo in pp.iter_photos(batch_size=settings.batch_size, max_photos=settings.max_photos_per_run):
@@ -198,7 +200,9 @@ def run_random_test(settings: Settings, write: bool = False) -> None:
         f"(max {settings.image_max_dimension}px, q={settings.image_jpeg_quality})"
     )
 
-    mistral = MistralClient(settings.mistral_api_key, model=settings.mistral_model)
+    mistral = MistralClient(
+        settings.mistral_api_key, model=settings.mistral_model, language=settings.output_language
+    )
     analysis = mistral.analyze_image(resized_bytes)
 
     print("\n--- Mistral analysis --------------------------------------")
