@@ -230,6 +230,12 @@ class PhotoPrismClient:
 
 
 def _primary_file_hash(photo: dict[str, Any]) -> str | None:
+    # Search/list results (GET /api/v1/photos) carry the primary file's hash
+    # directly at the top level - that's what the PhotoPrism web UI itself
+    # uses to build thumbnail URLs for gallery grids. GET /api/v1/photos/:uid
+    # (single record) instead nests it under Files.
+    if photo.get("Hash"):
+        return photo["Hash"]
     files = photo.get("Files") or []
     if not files:
         return None
