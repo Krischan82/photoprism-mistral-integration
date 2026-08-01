@@ -66,6 +66,11 @@ def build_patch(photo: dict[str, Any], analysis: PhotoAnalysis, settings: Settin
     if settings.enable_description and analysis.description:
         if settings.overwrite_existing or not _current_description(photo):
             patch["Caption"] = analysis.description
+            # PhotoPrism tracks a source per metadata field (CaptionSrc,
+            # KeywordsSrc, ...); leaving it blank appears to make the
+            # server silently discard the Caption change even though the
+            # PUT itself succeeds, so mark it explicitly as manually set.
+            patch["CaptionSrc"] = "manual"
 
     if settings.enable_keywords and analysis.keywords:
         existing = _current_keywords(photo)
