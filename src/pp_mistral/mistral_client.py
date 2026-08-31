@@ -47,7 +47,7 @@ class MistralClient:
     def __init__(
         self,
         api_key: str,
-        model: str = "mistral-small-latest",
+        model: str = "mistral-large-latest",
         language: str = "English",
         timeout: float = 60.0,
     ) -> None:

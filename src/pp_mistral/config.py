@@ -57,7 +57,7 @@ class Settings:
             photoprism_username=os.environ.get("PHOTOPRISM_USERNAME"),
             photoprism_password=os.environ.get("PHOTOPRISM_PASSWORD"),
             mistral_api_key=_require("MISTRAL_API_KEY"),
-            mistral_model=os.environ.get("MISTRAL_MODEL", "mistral-small-latest"),
+            mistral_model=os.environ.get("MISTRAL_MODEL", "mistral-large-latest"),
             output_language=os.environ.get("OUTPUT_LANGUAGE", "English"),
             enable_description=_bool("ENABLE_DESCRIPTION", True),
             enable_keywords=_bool("ENABLE_KEYWORDS", True),
