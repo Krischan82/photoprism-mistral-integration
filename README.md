@@ -180,6 +180,19 @@ Ergebnis tatsächlich in PhotoPrism gespeichert:
 docker compose run --rm photoprism-mistral python -m pp_mistral.main --random --write
 ```
 
+`--random` speichert außerdem das exakte, verkleinerte Bild, das an Mistral
+geschickt wurde, als `last-random-photo.jpg` neben `LOG_FILE` (also z.B.
+`docker/logs/photoprism-mistral/last-random-photo.jpg`) – damit lässt sich
+prüfen, ob wirklich das erwartete Foto (und nicht ein falsches/beschädigtes)
+analysiert wurde.
+
+#### Wenn Beschreibungen inhaltlich falsch sind (Halluzinationen)
+
+Vision-Modelle können Details erfinden. `mistral-small-latest` (Standard,
+günstiger) ist dabei spürbar unzuverlässiger als `mistral-large-latest`.
+Bei auffällig falschen Beschreibungen zuerst `MISTRAL_MODEL=mistral-large-latest`
+in der `.env` testen, bevor du nach einem Bug suchst.
+
 ### Lokal ohne Docker
 
 ```bash

@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import time
 from typing import Any
 
@@ -222,6 +223,15 @@ def run_random_test(settings: Settings, write: bool = False) -> None:
         f"-> resized to {len(resized_bytes) / 1024:.0f} KB "
         f"(max {settings.image_max_dimension}px, q={settings.image_jpeg_quality})"
     )
+
+    debug_dir = os.path.dirname(os.environ.get("LOG_FILE", "")) or "."
+    debug_path = os.path.join(debug_dir, "last-random-photo.jpg")
+    try:
+        with open(debug_path, "wb") as f:
+            f.write(resized_bytes)
+        print(f"Saved the exact image sent to Mistral to: {debug_path}")
+    except OSError as exc:
+        print(f"(Could not save debug image to {debug_path}: {exc})")
 
     mistral = MistralClient(
         settings.mistral_api_key, model=settings.mistral_model, language=settings.output_language
